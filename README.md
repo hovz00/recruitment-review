@@ -8,6 +8,10 @@
 
 > 截图均使用虚拟数据，仅用于功能展示。
 
+## 在线体验
+
+🔗 Demo：(https://recruitment-review-dashboard.netlify.app/)
+
 ## 功能
 
 系统包含 4 个页面：
