@@ -1,4 +1,12 @@
 node_modules/
+.agents/
+.codex/
+.ms-playwright/
+.pnpm-store/
+.python-packages/
+.tmp-chrome-profile/
+.worktrees/
+outputs/
 *.log
 .DS_Store
 Thumbs.db

@@ -1861,6 +1861,44 @@ test('复盘页面与报告统一三层结构、招聘记录口径及整体分�
   assert.match(output.onboardDefinition, /招聘记录/);
 });
 
+test('复盘洞察标题和分析说明统一左对齐', async () => {
+  const output = await page.evaluate(() => {
+    window.setCurrentStagesForTest(['简历评审', '一面', '入职']);
+    const result = window.buildAnalysisResultForTest([
+      makeCandidate({ candidateId: 'alignment-review', stageCode: 1, stageName: '一面' })
+    ], { selectedJobs: [], timeMode: 'overall', selectedMonth: '', selectedWeek: '' });
+    result.insights = [{
+      conclusion: '这是一个会换行的较长招聘复盘洞察标题，用于验证多行内容仍保持左对齐。',
+      evidence: [{ value: '1条招聘记录', detail: '数据依据' }],
+      action: '建议动作', validationMetrics: ['后续观察']
+    }];
+    result.reviewAnalysis = {
+      executiveSummary: [],
+      findings: [{
+        conclusion: '这是一个会换行的较长复盘发现标题，用于验证完整复盘分析的文字方向。',
+        evidence: [{ label: '数据依据', value: '1条招聘记录', detail: '事实说明' }],
+        actions: ['下一步建议'], observationMetrics: ['后续观察'], limitations: ['数据限制']
+      }],
+      priorityActions: [], currentRisks: { items: [] },
+      dataLimitations: [{ label: '数据说明', detail: '限制说明', navigation: {} }], periodChanges: null
+    };
+    window.renderReviewInsightsForTest(result);
+    window.renderReviewAnalysisPageForTest(result);
+    const align = selector => getComputedStyle(document.querySelector(selector)).textAlign;
+    return {
+      actionLink: align('.review-action-item .insight-link'),
+      actionBody: align('.review-action-item'),
+      finding: align('.review-analysis-finding'),
+      evidence: align('.analysis-evidence-button'),
+      nextStep: align('.finding-next-step'),
+      observation: align('.finding-observation'),
+      dataLimit: align('.finding-data-limit'),
+      analysisLimit: align('#reviewAnalysisDataLimitations .analysis-evidence-button')
+    };
+  });
+  assert.ok(Object.values(output).every(value => value === 'left'), JSON.stringify(output));
+});
+
 test('表格人数比例与时长右对齐，业务文字列保持左对齐', async () => {
   const output = await page.evaluate(() => {
     renderCompactTable('detailsStageMainTable', ['阶段', '人数', '占比', '平均停留', '渠道'], [['一面', 12, '35%', '3天', '渠道A']], '');
@@ -1871,6 +1909,73 @@ test('表格人数比例与时长右对齐，业务文字列保持左对齐', as
   });
   assert.deepEqual(output.headers, [false, true, true, true, false]);
   assert.deepEqual(output.cells, [false, true, true, true, false]);
+});
+
+test('详细分析遗漏的数值和百分比表头均识别为numeric列', async () => {
+  const output = await page.evaluate(() => {
+    const headers = ['阶段', '到达', '初筛通过率', '一面到达率', 'Offer率', '理论样本', '平均耗时', '日期覆盖率', '流失原因'];
+    renderCompactTable('detailsStageMainTable', headers, [['一面', 12, '60%', '40%', '10%', 8, '3天', '75%', '岗位关闭']], '');
+    return {
+      headers: Array.from(document.querySelectorAll('#detailsStageMainTable th')).map(node => node.classList.contains('is-numeric')),
+      cells: Array.from(document.querySelectorAll('#detailsStageMainTable td')).map(node => node.classList.contains('is-numeric'))
+    };
+  });
+  const expected = [false, true, true, true, true, true, true, true, false];
+  assert.deepEqual(output.headers, expected);
+  assert.deepEqual(output.cells, expected);
+});
+
+test('分析明细各Tab文本列左对齐且数值列表头与内容均右对齐', async () => {
+  const output = await page.evaluate(() => {
+    window.setCurrentStagesForTest(['简历评审', '电话联系', '一面', 'Offer', '入职']);
+    ['stage', 'stage-reason', 'jobs', 'channels', 'companies', 'candidates', 'quality'].forEach(view => replaceDetailViewFilters(view, {}));
+    const rows = [
+      makeCandidate({
+        candidateId: 'detail-completed', candidateName: '候选人A', stageCode: 4, stageName: '入职',
+        processState: 'completed', status: 'passed', source: '渠道A', company: '公司A', jobName: '岗位A',
+        stageDates: { 0: '2026-08-01', 1: '2026-08-02', 2: '2026-08-04', 3: '2026-08-06', 4: '2026-08-08' }
+      }),
+      makeCandidate({
+        candidateId: 'detail-terminated', candidateName: '候选人B', stageCode: 2, stageName: '一面',
+        processState: 'terminated_business', status: 'terminated', rawTerminationReason: '岗位关闭',
+        source: '渠道B', company: '公司B', jobName: '岗位B', stageDates: { 0: '2026-08-01', 1: '2026-08-02', 2: '2026-08-04' }
+      }),
+      makeCandidate({
+        candidateId: 'detail-quality', candidateName: '候选人C', stageCode: 1, stageName: '电话联系',
+        processState: 'in_progress', status: 'in_progress', source: '', company: '公司C', jobName: '岗位C', stageDates: {}
+      })
+    ];
+    const result = window.buildAnalysisResultForTest(rows, { selectedJobs: [], timeMode: 'overall', selectedMonth: '', selectedWeek: '' });
+    window.renderAnalysisDetailsForTest(result);
+    const expectedByTable = {
+      detailsStageMainTable: [false, true, true, true, true, true, true, true],
+      detailsStageTimingTable: [false, true, true, true, true],
+      detailsStageReasonPanel: [false, false, true, true],
+      detailsJobsPanel: [false, true, true, true, true, true, true, false, true],
+      detailsChannelsPanel: [false, true, true, true, true, true, true, false],
+      detailsCompaniesPanel: [false, true, true, true, true, true, true, false],
+      detailsCandidatesPanel: [false, false, false, false, false, false, false, false],
+      qualityIssueDetails: [false, true, true, false, false]
+    };
+    return Object.fromEntries(Object.entries(expectedByTable).map(([containerId, expected]) => {
+      const table = document.querySelector('#' + containerId + ' table.compact-table');
+      const headers = Array.from(table?.querySelectorAll('thead th') || []);
+      const cells = Array.from(table?.querySelectorAll('tbody tr:first-child td') || []);
+      return [containerId, {
+        expected,
+        classes: headers.map(node => node.classList.contains('is-numeric')),
+        headerAlign: headers.map(node => getComputedStyle(node).textAlign),
+        cellAlign: cells.map(node => getComputedStyle(node).textAlign)
+      }];
+    }));
+  });
+  for (const [table, result] of Object.entries(output)) {
+    assert.deepEqual(result.classes, result.expected, table + ' numeric columns');
+    assert.ok(result.headerAlign.every(value => value !== 'center'), table + ' header contains centered columns');
+    assert.ok(result.cellAlign.every(value => value !== 'center'), table + ' body contains centered columns');
+    assert.deepEqual(result.headerAlign, result.cellAlign, table + ' header/body alignment mismatch');
+    assert.deepEqual(result.headerAlign, result.expected.map(isNumeric => isNumeric ? 'right' : 'left'), table + ' alignment');
+  }
 });
 
 test('浏览器点击下载复盘报告并使用当前筛选文件名', async () => {
@@ -1886,6 +1991,486 @@ test('浏览器点击下载复盘报告并使用当前筛选文件名', async ()
   await page.getByRole('button', { name: '下载复盘报告' }).click();
   const download = await downloadPromise;
   assert.equal(download.suggestedFilename(), '招聘数据复盘_全部岗位_整体分析_全部时间.txt');
+});
+
+test('复制复盘内容优先使用可用的Clipboard API并显示成功结果', async () => {
+  const output = await page.evaluate(async () => {
+    window.setCurrentStagesForTest(['简历评审', '入职']);
+    currentAnalysisResult = window.buildAnalysisResultForTest([makeCandidate()], { selectedJobs: [], timeMode: 'overall', selectedMonth: '', selectedWeek: '' });
+    hidePageMessage();
+    let clipboardCalls = 0;
+    let fallbackCalls = 0;
+    const originalExecCommand = document.execCommand;
+    Object.defineProperty(navigator, 'clipboard', { configurable: true, value: { writeText: async () => { clipboardCalls += 1; } } });
+    document.execCommand = () => { fallbackCalls += 1; return true; };
+    try {
+      const copied = await copyReviewAnalysisContent();
+      return { copied, clipboardCalls, fallbackCalls, message: document.getElementById('messageBanner').textContent };
+    } finally {
+      delete navigator.clipboard;
+      document.execCommand = originalExecCommand;
+    }
+  });
+  assert.deepEqual(output, { copied: true, clipboardCalls: 1, fallbackCalls: 0, message: '复盘内容已复制。' });
+});
+
+test('Clipboard API拒绝且fallback失败时无pageerror并提示手动复制', async () => {
+  const errorsBefore = pageErrors.length;
+  const output = await page.evaluate(async () => {
+    window.setCurrentStagesForTest(['简历评审', '入职']);
+    currentAnalysisResult = window.buildAnalysisResultForTest([makeCandidate()], { selectedJobs: [], timeMode: 'overall', selectedMonth: '', selectedWeek: '' });
+    hidePageMessage();
+    let fallbackCalls = 0;
+    const originalExecCommand = document.execCommand;
+    Object.defineProperty(navigator, 'clipboard', { configurable: true, value: { writeText: () => Promise.reject(new Error('clipboard denied')) } });
+    document.execCommand = () => { fallbackCalls += 1; return false; };
+    try {
+      const copied = await copyReviewAnalysisContent();
+      return {
+        copied,
+        fallbackCalls,
+        message: document.getElementById('messageBanner').textContent,
+        temporaryTextareas: document.querySelectorAll('textarea[data-copy-fallback]').length
+      };
+    } finally {
+      delete navigator.clipboard;
+      document.execCommand = originalExecCommand;
+    }
+  });
+  await page.waitForTimeout(0);
+  assert.equal(pageErrors.length, errorsBefore);
+  assert.deepEqual(output, { copied: false, fallbackCalls: 1, message: '复制失败，请手动复制。', temporaryTextareas: 0 });
+});
+
+test('Clipboard API不存在时使用textarea fallback复制并清理临时元素', async () => {
+  const output = await page.evaluate(async () => {
+    window.setCurrentStagesForTest(['简历评审', '入职']);
+    currentAnalysisResult = window.buildAnalysisResultForTest([makeCandidate()], { selectedJobs: [], timeMode: 'overall', selectedMonth: '', selectedWeek: '' });
+    hidePageMessage();
+    let fallbackCalls = 0;
+    const originalExecCommand = document.execCommand;
+    Object.defineProperty(navigator, 'clipboard', { configurable: true, value: undefined });
+    document.execCommand = command => { fallbackCalls += command === 'copy' ? 1 : 0; return true; };
+    try {
+      const copied = await copyReviewAnalysisContent();
+      return {
+        copied,
+        fallbackCalls,
+        message: document.getElementById('messageBanner').textContent,
+        temporaryTextareas: document.querySelectorAll('textarea[data-copy-fallback]').length
+      };
+    } finally {
+      delete navigator.clipboard;
+      document.execCommand = originalExecCommand;
+    }
+  });
+  assert.deepEqual(output, { copied: true, fallbackCalls: 1, message: '复盘内容已复制。', temporaryTextareas: 0 });
+});
+
+test('电话阶段仅有业务关闭时不生成候选人意愿触达或 Sourcing 归因', async () => {
+  const output = await page.evaluate(() => {
+    window.setCurrentStagesForTest(['简历评审', '电话联系', '一面', 'Offer', '入职']);
+    const rows = Array.from({ length: 12 }, (_, index) => makeCandidate({
+      candidateId: 'phone-business-' + index,
+      stageCode: 1,
+      stageName: '电话联系',
+      status: 'terminated',
+      processState: 'terminated_business',
+      rawTerminationReason: '岗位关闭',
+      stageDates: { 1: '2026-08-02' }
+    }));
+    const result = window.buildAnalysisResultForTest(rows, { selectedJobs: [], timeMode: 'overall', selectedMonth: '', selectedWeek: '' });
+    return JSON.stringify({ insights: result.insights, findings: result.reviewAnalysis.findings });
+  });
+  assert.doesNotMatch(output, /候选人意愿|触达问题|Sourcing|沟通话术|人才池扩大|筛选策略/);
+  assert.match(output, /岗位|需求|HC|业务/);
+});
+
+test('一面仅有 HC 关闭时不生成面试质量或前端筛选归因', async () => {
+  const output = await page.evaluate(() => {
+    window.setCurrentStagesForTest(['简历评审', '电话联系', '一面', 'Offer', '入职']);
+    const rows = Array.from({ length: 8 }, (_, index) => makeCandidate({
+      candidateId: 'first-business-' + index,
+      stageCode: 2,
+      stageName: '一面',
+      status: 'terminated',
+      processState: 'terminated_business',
+      rawTerminationReason: 'HC关闭',
+      stageDates: { 2: '2026-08-03' }
+    }));
+    const result = window.buildAnalysisResultForTest(rows, { selectedJobs: [], timeMode: 'overall', selectedMonth: '', selectedWeek: '' });
+    return JSON.stringify({ insights: result.insights, findings: result.reviewAnalysis.findings });
+  });
+  assert.doesNotMatch(output, /面试质量|面试评价标准|简历筛选|筛选策略|Must-have|人才画像/);
+  assert.match(output, /岗位|需求|HC|业务/);
+});
+
+test('流失原因缺失时只建议核查原因且不自动猜测招聘归因', async () => {
+  const output = await page.evaluate(() => {
+    window.setCurrentStagesForTest(['简历评审', '电话联系', '一面', 'Offer', '入职']);
+    const rows = Array.from({ length: 6 }, (_, index) => makeCandidate({
+      candidateId: 'phone-unknown-' + index,
+      stageCode: 1,
+      stageName: '电话联系',
+      status: 'terminated',
+      processState: 'terminated_unknown_reason',
+      rawTerminationReason: '',
+      stageDates: { 1: '2026-08-02' }
+    }));
+    const result = window.buildAnalysisResultForTest(rows, { selectedJobs: [], timeMode: 'overall', selectedMonth: '', selectedWeek: '' });
+    return JSON.stringify({ insights: result.insights, findings: result.reviewAnalysis.findings });
+  });
+  assert.match(output, /核查|确认.*原因|原因.*确认/);
+  assert.doesNotMatch(output, /意愿问题|触达问题|Sourcing|沟通话术|简历筛选|面试评价标准|人才画像/);
+});
+
+test('存在明确候选人侧原因时可以生成对应招聘动作', async () => {
+  const output = await page.evaluate(() => {
+    window.setCurrentStagesForTest(['简历评审', '电话联系', '一面', 'Offer', '入职']);
+    const rows = Array.from({ length: 6 }, (_, index) => makeCandidate({
+      candidateId: 'phone-candidate-' + index,
+      stageCode: 1,
+      stageName: '电话联系',
+      status: 'terminated',
+      processState: 'terminated_recruitment',
+      rawTerminationReason: index < 4 ? '不看机会/无意向' : '联系不上',
+      stageDates: { 1: '2026-08-02' }
+    }));
+    const result = window.buildAnalysisResultForTest(rows, { selectedJobs: [], timeMode: 'overall', selectedMonth: '', selectedWeek: '' });
+    const insight = result.insights.find(item => item.id === 'phone-contact-loss');
+    const finding = result.reviewAnalysis.findings.find(item => item.id === 'phone-contact-loss');
+    return { insight, finding };
+  });
+  assert.match(output.insight?.conclusion || '', /候选人|意愿|触达/);
+  assert.match([output.insight?.action, ...(output.finding?.actions || [])].join(' '), /沟通|联系|Sourcing|人才池|意愿/);
+});
+
+test('电话阶段业务或HC原因占主导时不被少数候选人原因带偏', async () => {
+  const output = await page.evaluate(() => {
+    window.setCurrentStagesForTest(['简历评审', '电话联系', '一面', 'Offer', '入职']);
+    const rows = Array.from({ length: 12 }, (_, index) => makeCandidate({
+      candidateId: 'phone-business-dominant-' + index,
+      stageCode: 1,
+      stageName: '电话联系',
+      status: 'terminated',
+      processState: index < 11 ? 'terminated_business' : 'terminated_recruitment',
+      rawTerminationReason: index < 11 ? '岗位关闭' : '不看机会/无意向',
+      stageDates: { 1: '2026-08-02' }
+    }));
+    const result = window.buildAnalysisResultForTest(rows, { selectedJobs: [], timeMode: 'overall', selectedMonth: '', selectedWeek: '' });
+    const insight = result.insights.find(item => item.id === 'phone-contact-loss');
+    return { conclusion: insight?.conclusion || '', action: insight?.action || '' };
+  });
+  assert.match(output.conclusion, /主要.*(?:业务|HC)|(?:业务|HC).*主要/);
+  assert.doesNotMatch(output.conclusion + output.action, /候选人意愿.*主要|触达.*主要|Sourcing|沟通话术|扩大人才池|调整.*关键词/);
+});
+
+test('电话阶段候选人侧原因占主导时按真实意愿和触达原因给出动作', async () => {
+  const output = await page.evaluate(() => {
+    window.setCurrentStagesForTest(['简历评审', '电话联系', '一面', 'Offer', '入职']);
+    const rows = Array.from({ length: 12 }, (_, index) => makeCandidate({
+      candidateId: 'phone-candidate-dominant-' + index,
+      stageCode: 1,
+      stageName: '电话联系',
+      status: 'terminated',
+      processState: index < 10 ? 'terminated_recruitment' : 'terminated_business',
+      rawTerminationReason: index < 6 ? '不看机会/无意向' : index < 10 ? '联系不上' : '岗位关闭',
+      stageDates: { 1: '2026-08-02' }
+    }));
+    const result = window.buildAnalysisResultForTest(rows, { selectedJobs: [], timeMode: 'overall', selectedMonth: '', selectedWeek: '' });
+    const insight = result.insights.find(item => item.id === 'phone-contact-loss');
+    return { conclusion: insight?.conclusion || '', action: insight?.action || '' };
+  });
+  assert.match(output.conclusion, /主要.*候选人|候选人.*主要/);
+  assert.match(output.action, /意愿|联系|触达|沟通/);
+});
+
+test('电话阶段多类原因无主导项时展示原因分布且不强行单一归因', async () => {
+  const output = await page.evaluate(() => {
+    window.setCurrentStagesForTest(['简历评审', '电话联系', '一面', 'Offer', '入职']);
+    const rows = Array.from({ length: 12 }, (_, index) => makeCandidate({
+      candidateId: 'phone-mixed-' + index,
+      stageCode: 1,
+      stageName: '电话联系',
+      status: 'terminated',
+      processState: index < 5 ? 'terminated_business' : 'terminated_recruitment',
+      rawTerminationReason: index < 5 ? '岗位关闭' : index < 9 ? '不看机会/无意向' : '联系不上',
+      stageDates: { 1: '2026-08-02' }
+    }));
+    const result = window.buildAnalysisResultForTest(rows, { selectedJobs: [], timeMode: 'overall', selectedMonth: '', selectedWeek: '' });
+    const insight = result.insights.find(item => item.id === 'phone-contact-loss');
+    return { conclusion: insight?.conclusion || '', action: insight?.action || '' };
+  });
+  assert.match(output.conclusion, /41\.7%/);
+  assert.match(output.conclusion, /33\.3%/);
+  assert.match(output.conclusion, /25\.0%/);
+  assert.match(output.conclusion, /原因较为分散|暂未形成单一主因/);
+  assert.doesNotMatch(output.conclusion, /主要与|主要集中/);
+  assert.match(output.action, /需求|HC|岗位/);
+  assert.match(output.action, /意愿/);
+  assert.match(output.action, /联系|触达/);
+});
+
+test('阶段结构变化后从原始导入行重新派生流程状态', async () => {
+  const output = await page.evaluate(() => {
+    window.setCurrentStagesForTest(['简历评审', '入职']);
+    const committed = window.commitImportedRowsForTest([{
+      主阶段: '1-入职',
+      阶段状态: '通过',
+      候选人姓名: '候选人A',
+      岗位名称: '岗位A',
+      简历收取时间: '2026-08-01',
+      '1-入职日期': '2026-08-10'
+    }]);
+    const before = { completed: currentAnalysisResult.summary.completedCount, processState: rawData[0].processState };
+    const applied = window.applyStageConfigurationForTest(['简历评审', 'Offer', '入职']);
+    return {
+      committed,
+      applied,
+      before,
+      after: { completed: currentAnalysisResult.summary.completedCount, processState: rawData[0].processState, stageCode: rawData[0].stageCode }
+    };
+  });
+  assert.equal(output.committed, true);
+  assert.deepEqual(output.before, { completed: 1, processState: 'completed' });
+  assert.equal(output.applied.rederived, true);
+  assert.equal(output.after.completed, 0);
+  assert.notEqual(output.after.processState, 'completed');
+});
+
+test('阶段数量相同但中间阶段交换顺序时识别为结构变化', async () => {
+  const output = await page.evaluate(() => {
+    window.setCurrentStagesForTest(['简历评审', '电话联系', '一面', '入职']);
+    window.commitImportedRowsForTest([{
+      主阶段: '2-一面', 阶段状态: '进行中', 候选人姓名: '候选人A', 岗位名称: '岗位A', 简历收取时间: '2026-08-01'
+    }]);
+    const current = window.getCurrentStages();
+    const reordered = [current[0], current[2], current[1], current[3]].map((stage, code) => ({ ...stage, code }));
+    return window.applyStageConfigurationDraftForTest(reordered);
+  });
+  assert.equal(output.applied, true);
+  assert.equal(output.rederived, true);
+});
+
+test('只修改阶段SLA时不触发流程结构重派生', async () => {
+  const output = await page.evaluate(() => {
+    window.setCurrentStagesForTest(['简历评审', '电话联系', '一面', '入职']);
+    window.commitImportedRowsForTest([{
+      主阶段: '1-电话联系', 阶段状态: '进行中', 候选人姓名: '候选人A', 岗位名称: '岗位A', 简历收取时间: '2026-08-01'
+    }]);
+    const draft = window.getCurrentStages();
+    draft[1].slaDays += 1;
+    return window.applyStageConfigurationDraftForTest(draft);
+  });
+  assert.equal(output.applied, true);
+  assert.equal(output.rederived, false);
+});
+
+test('同一语义阶段只修改显示名称时不触发流程结构重派生', async () => {
+  const output = await page.evaluate(() => {
+    window.setCurrentStagesForTest(['简历评审', '电话联系', '一面', '入职']);
+    window.commitImportedRowsForTest([{
+      主阶段: '1-电话联系', 阶段状态: '进行中', 候选人姓名: '候选人A', 岗位名称: '岗位A', 简历收取时间: '2026-08-01'
+    }]);
+    const draft = window.getCurrentStages();
+    draft[1].label = '电话沟通';
+    return window.applyStageConfigurationDraftForTest(draft);
+  });
+  assert.equal(output.applied, true);
+  assert.equal(output.rederived, false);
+});
+
+test('AnalysisResult 在任意一级页重建后同步顶部当前范围', async () => {
+  const output = await page.evaluate(() => {
+    window.setCurrentStagesForTest(['简历评审', '入职']);
+    window.setRawDataForTest([
+      makeCandidate({ candidateId: 'scope-1', stageCode: 0 }),
+      makeCandidate({ candidateId: 'scope-2', stageCode: 0 })
+    ]);
+    document.getElementById('timeDimension').value = 'overall';
+    document.getElementById('jobSelect').value = '';
+    document.getElementById('reviewRecordCount').textContent = '999';
+    switchMainView('details');
+    refreshData();
+    return {
+      view: currentMainView,
+      count: document.getElementById('reviewRecordCount').textContent,
+      resultCount: currentAnalysisResult.rows.length
+    };
+  });
+  assert.deepEqual(output, { view: 'details', count: '2', resultCount: 2 });
+});
+
+test('新文件成功提交后清除所有旧数据局部筛选和页码', async () => {
+  const output = await page.evaluate(() => {
+    window.setCurrentStagesForTest(['简历评审', '入职']);
+    window.commitImportedRowsForTest([{ 主阶段: '0-简历评审', 阶段状态: '终止', 终止原因: '旧原因', 候选人姓名: '候选人A', 岗位名称: '岗位A', 简历收取时间: '2026-07-01' }]);
+    navigateToDetails('candidates', { search: '旧人选', page: 3, terminationReason: '旧原因', candidateId: 'old-id' });
+    navigateToAttention({ search: '旧人选', slaState: 'overdue', stageCode: 0 });
+    const committed = window.commitImportedRowsForTest([{ 主阶段: '0-简历评审', 阶段状态: '进行中', 候选人姓名: '候选人B', 岗位名称: '岗位B', 简历收取时间: '2026-08-01' }]);
+    return { committed, state: window.getDataBoundUiStateForTest() };
+  });
+  assert.equal(output.committed, true);
+  assert.ok(Object.values(output.state.detailViewFilters).every(filters => Object.keys(filters).length === 0));
+  assert.deepEqual(output.state.attentionFilters, {});
+  assert.equal(output.state.pendingSearchTimers, 0);
+});
+
+test('新文件验证失败时完整保留上一份有效数据和分析结果', async () => {
+  const output = await page.evaluate(() => {
+    window.setCurrentStagesForTest(['简历评审', '入职']);
+    window.commitImportedRowsForTest([{ 主阶段: '0-简历评审', 阶段状态: '进行中', 候选人姓名: '候选人A', 岗位名称: '岗位A', 简历收取时间: '2026-08-01' }]);
+    const before = { rawCount: rawData.length, name: rawData[0].candidateName, resultCount: currentAnalysisResult.rows.length };
+    const committed = window.commitImportedRowsForTest([{ 无关字段: '不是招聘数据' }]);
+    return {
+      committed,
+      before,
+      after: { rawCount: rawData.length, name: rawData[0].candidateName, resultCount: currentAnalysisResult.rows.length }
+    };
+  });
+  assert.equal(output.committed, false);
+  assert.deepEqual(output.after, output.before);
+});
+
+test('月度分析明确采用简历收取时间 cohort 且结果截至当前', async () => {
+  const output = await page.evaluate(() => {
+    window.setCurrentStagesForTest(['简历评审', 'Offer', '入职']);
+    const row = makeCandidate({
+      candidateId: 'july-to-august',
+      stageCode: 2,
+      stageName: '入职',
+      status: 'passed',
+      processState: 'completed',
+      resumeTime: '2026-07-20',
+      stageDates: { 0: '2026-07-20', 1: '2026-07-28', 2: '2026-08-05' }
+    });
+    const result = window.buildAnalysisResultForTest([row], { selectedJobs: [], timeMode: 'month', selectedMonth: '2026-07', selectedWeek: '' });
+    return { rows: result.rows.length, completed: result.summary.completedCount, scopeLabel: result.scopeLabel };
+  });
+  assert.equal(output.rows, 1);
+  assert.equal(output.completed, 1);
+  assert.match(output.scopeLabel, /简历收取|收到/);
+  assert.match(output.scopeLabel, /截至当前/);
+});
+
+test('趋势环比只比较相邻自然周期而不跨越空月份', async () => {
+  const output = await page.evaluate(() => {
+    window.setCurrentStagesForTest(['简历评审', '入职']);
+    const row = (id, resumeTime) => makeCandidate({ candidateId: id, resumeTime, stageCode: 0, stageDates: { 0: resumeTime } });
+    const gap = window.buildAnalysisResultForTest(
+      [row('jan', '2026-01-10'), row('mar', '2026-03-10')],
+      { selectedJobs: [], timeMode: 'month', selectedMonth: '2026-03', selectedWeek: '' }
+    );
+    const adjacent = window.buildAnalysisResultForTest(
+      [row('jan-2', '2026-01-10'), row('feb', '2026-02-10')],
+      { selectedJobs: [], timeMode: 'month', selectedMonth: '2026-02', selectedWeek: '' }
+    );
+    window.renderReviewPageForTest(gap);
+    return { gapComparison: gap.trend.comparison, adjacentComparison: adjacent.trend.comparison, gapUi: document.getElementById('periodTrendChanges').textContent };
+  });
+  assert.equal(output.gapComparison, null);
+  assert.match(output.gapUi, /暂无上一期可比较数据/);
+  assert.doesNotMatch(output.gapUi, /环比/);
+  assert.equal(output.adjacentComparison.previousKey, '2026-01');
+  assert.equal(output.adjacentComparison.currentKey, '2026-02');
+});
+
+test('全部月份分析保留缺少简历日期的趋势数据质量提示', async () => {
+  const output = await page.evaluate(() => {
+    window.setCurrentStagesForTest(['简历评审', '入职']);
+    const rows = [
+      makeCandidate({ candidateId: 'dated', resumeTime: '2026-01-10' }),
+      makeCandidate({ candidateId: 'missing-date', resumeTime: null })
+    ];
+    const result = window.buildAnalysisResultForTest(rows, { selectedJobs: [], timeMode: 'month', selectedMonth: '', selectedWeek: '' });
+    return {
+      total: result.rows.length,
+      trendTotal: result.trend.buckets.reduce((sum, bucket) => sum + bucket.totalRecords, 0),
+      excluded: result.quality.excludedMissingDateCount,
+      limitations: result.reviewAnalysis.dataLimitations.map(item => item.detail).join(' ')
+    };
+  });
+  assert.equal(output.total, 2);
+  assert.equal(output.trendTotal, 1);
+  assert.equal(output.excluded, 1);
+  assert.match(output.limitations, /趋势|简历收取时间|日期/);
+});
+
+test('阶段 SLA 说明明确自然日、估算与非责任认定边界', async () => {
+  const body = await page.evaluate(() => {
+    window.setCurrentStagesForTest(['简历评审', '一面', '入职']);
+    window.renderStageTimingPanelForTest([{
+      code: 0,
+      label: '简历评审',
+      transitionTimeStats: { validSampleCount: 1, averageDays: 2 }
+    }]);
+    return document.querySelector('.stage-timing-card .info-trigger')?.dataset.infoBody || '';
+  });
+  assert.match(body, /自然日/);
+  assert.match(body, /流程提醒/);
+  assert.match(body, /估算/);
+  assert.match(body, /不用于责任认定/);
+});
+
+test('岗位、渠道和来源公司比例对小样本只显示百分比', async () => {
+  const output = await page.evaluate(() => {
+    window.setCurrentStagesForTest(['简历评审', '电话联系', '一面', 'Offer', '入职']);
+    const small = {
+      name: '样本一', totalCandidates: 1, completedCount: 1, finalConversionRate: 100,
+      mainLossStage: null, slaOverdueCount: 0, sampleSmall: true,
+      stageReach: { 0: 1, 1: 1, 2: 1, 3: 1, 4: 1 }
+    };
+    renderDimensionDetails('detailsJobsPanel', '岗位', [small]);
+    renderDimensionDetails('detailsChannelsPanel', '渠道', [small]);
+    renderDimensionDetails('detailsCompaniesPanel', '人选来源公司', [small]);
+    return {
+      job: document.getElementById('detailsJobsPanel').textContent,
+      channel: document.getElementById('detailsChannelsPanel').textContent,
+      company: document.getElementById('detailsCompaniesPanel').textContent
+    };
+  });
+  [output.job, output.channel, output.company].forEach(text => {
+    assert.match(text, /100%/);
+    assert.doesNotMatch(text, /（1\/1）/);
+    assert.doesNotMatch(text, /小样本/);
+  });
+});
+
+test('仅已终止且缺少原始原因的记录显示原因未记录', async () => {
+  const output = await page.evaluate(() => {
+    window.setCurrentStagesForTest(['简历评审', '入职']);
+    const rows = [
+      makeCandidate({ candidateId: 'active', processState: 'in_progress', status: 'in_progress', rawTerminationReason: '' }),
+      makeCandidate({ candidateId: 'done', stageCode: 1, processState: 'completed', status: 'passed', rawTerminationReason: '' }),
+      makeCandidate({ candidateId: 'terminated', processState: 'terminated_unknown_reason', status: 'terminated', rawTerminationReason: '' })
+    ];
+    const result = window.buildAnalysisResultForTest(rows, { selectedJobs: [], timeMode: 'overall', selectedMonth: '', selectedWeek: '' });
+    return Object.fromEntries(result.candidateDetails.map(row => [row.candidateId, row.rawReason]));
+  });
+  assert.equal(output.active, '—');
+  assert.equal(output.done, '—');
+  assert.equal(output.terminated, '原因未记录');
+});
+
+test('Attention首页预览与完整页统一使用招聘记录计数单位', async () => {
+  const output = await page.evaluate(() => {
+    window.setCurrentStagesForTest(['简历评审', '一面', '入职']);
+    const rows = [
+      makeCandidate({ candidateId: 'attention-record-1', stageCode: 1, stageName: '一面', processState: 'in_progress', status: 'in_progress', stageDates: { 1: '2026-08-01' } }),
+      makeCandidate({ candidateId: 'attention-record-2', stageCode: 1, stageName: '一面', processState: 'passed_pending_next', status: 'passed', stageDates: { 1: '2026-08-02' } })
+    ];
+    const result = window.buildAnalysisResultForTest(rows, { selectedJobs: [], timeMode: 'overall', selectedMonth: '', selectedWeek: '' });
+    window.renderReviewPageForTest(result);
+    window.renderAttentionBoardForTest(result);
+    return {
+      count: result.attentionCandidates.length,
+      preview: document.getElementById('attentionPreviewTotal').textContent,
+      board: document.getElementById('attentionTotalBadge').textContent
+    };
+  });
+  assert.equal(output.count, 2);
+  assert.equal(output.preview, '（共2条记录）');
+  assert.equal(output.board, '（共2条记录）');
 });
 
 try {

@@ -609,10 +609,6 @@
       vertical-align: top;
       line-height: 1.5;
     }
-    .compact-table th:not(:first-child):not(:last-child),
-    .compact-table td:not(:first-child):not(:last-child) {
-      text-align: center;
-    }
     .compact-table th {
       background: #f8fafc;
       color: #4b5563;
@@ -1156,6 +1152,8 @@
     .filter-toolbar .filter-group select { min-width: 136px; max-width: 248px; height: 32px; padding: 0 27px 0 9px; border: 1px solid #d9e0ea; border-radius: 5px; color: #25334a; background: #fff; font-size: 12px; }
     .range-records { color: #657286; font-size: 13px; white-space: nowrap; }
     .range-records strong { color: #1c66d8; font-variant-numeric: tabular-nums; }
+    .cohort-scope-note { color: #7b8798; font-size: 11px; white-space: nowrap; }
+    .cohort-scope-note[hidden] { display: none !important; }
     .dashboard-hc-target { display: none !important; }
     .main-page > * + * { margin-top: 16px; }
     .review-heading { display: none !important; }
@@ -1216,9 +1214,10 @@
     .review-lower-grid .trend-panel { grid-column: span 1; }
     .review-action-panel { min-width: 0; height: 100%; box-sizing: border-box; }
     .review-action-list { border-top: 1px solid #e7ecf2; }
-    .review-action-item { display: grid; grid-template-columns: 29px minmax(0, 1fr); gap: 11px; padding: 15px 0; border-bottom: 1px solid #e7ecf2; }
+    .review-action-item { display: grid; grid-template-columns: 29px minmax(0, 1fr); gap: 11px; padding: 15px 0; border-bottom: 1px solid #e7ecf2; text-align: left; }
     .review-action-item:last-child { padding-bottom: 2px; border-bottom: 0; }
     .review-action-index { display: block; width: 29px; padding-top: 1px; color: #1769e8; background: transparent; font-size: 12px; font-weight: 800; line-height: 1.5; }
+    .review-action-item .insight-link { width: 100%; text-align: left; }
     .review-action-item h4 { margin: 0 0 6px; color: #172033; font-size: 14px; }
     .review-action-item p { margin: 4px 0; color: #4b5970; font-size: 12px; line-height: 1.55; }
     .review-action-label { color: #1769e8; font-weight: 800; }
@@ -1309,11 +1308,11 @@
     .review-summary-items span { min-width: 0; }
     .review-summary-items strong { color: #1769e8; font-size: 13px; font-weight: 800; }
     .review-analysis-workspace { display: grid; grid-template-columns: minmax(0, 7fr) minmax(286px, 3fr); align-items: start; gap: 16px; }
-    .review-analysis-findings, .review-analysis-sidebar { padding: 17px 20px; border: 1px solid #e1e7ef; border-radius: 8px; background: #fff; }
+    .review-analysis-findings, .review-analysis-sidebar { padding: 17px 20px; border: 1px solid #e1e7ef; border-radius: 8px; background: #fff; text-align: left; }
     .review-analysis-page h3 { margin: 0; color: #1c2b42; font-size: 17px; }
     .review-analysis-findings .dashboard-panel-title { margin-bottom: 3px; }
     .review-analysis-findings .dashboard-panel-title span { color: #7b8797; font-size: 12px; }
-    .review-analysis-finding { display: grid; grid-template-columns: 31px minmax(0, 1fr); gap: 12px; padding: 15px 0; border-top: 1px solid #e5ebf2; }
+    .review-analysis-finding { display: grid; grid-template-columns: 31px minmax(0, 1fr); gap: 12px; padding: 15px 0; border-top: 1px solid #e5ebf2; text-align: left; }
     .review-analysis-finding:first-child { border-top: 0; padding-top: 11px; }
     .review-analysis-index { display: block; color: #1769e8; font-size: 15px; font-weight: 800; line-height: 1.35; letter-spacing: .03em; }
     .review-analysis-finding h4 { margin: 0 0 8px; color: #172033; font-size: 17px; font-weight: 700; line-height: 1.4; }
@@ -1539,6 +1538,7 @@
           <div class="filter-group" id="weekSelector" hidden><label for="selectedWeek">时间范围</label><select id="selectedWeek" onchange="refreshData()"><option value="">全部周</option></select></div>
           <div class="filter-group"><label for="jobSelect">岗位范围</label><select id="jobSelect" onchange="handleJobChange()"><option value="">全部岗位</option></select></div>
         </div>
+        <span id="cohortScopeNote" class="cohort-scope-note" hidden>按简历收取时间分析，结果截至当前。</span>
         <div class="range-records">当前范围：<strong id="reviewRecordCount">0</strong>条招聘记录</div>
         <div class="hc-target-row dashboard-hc-target" hidden><label for="targetHcInput">目标HC</label><input id="targetHcInput" type="number" min="0" step="1" placeholder="输入人数" oninput="handleTargetHcInput()" /><span>人</span><span class="hc-target-help" id="targetHcHelp"></span></div>
       </section>
@@ -1576,7 +1576,7 @@
 
         <div class="review-lower-grid" id="reviewLowerGrid">
           <section class="card review-action-panel"><div class="dashboard-panel-title"><h3 data-section-icon="review">招聘复盘与行动建议</h3><button class="review-analysis-link" type="button" onclick="switchMainView('reviewAnalysis')">查看完整复盘分析 ›</button></div><div id="reviewActionList"></div></section>
-          <section class="card attention-preview-panel" id="attentionPreview"><div class="dashboard-panel-title"><h3 data-section-icon="attention">需关注候选人 <span id="attentionPreviewTotal">（共0人）</span></h3></div><div id="attentionPreviewContent"></div></section>
+          <section class="card attention-preview-panel" id="attentionPreview"><div class="dashboard-panel-title"><h3 data-section-icon="attention">需关注候选人 <span id="attentionPreviewTotal">（共0条记录）</span></h3></div><div id="attentionPreviewContent"></div></section>
         </div>
         </div>
       </section>
@@ -1606,7 +1606,7 @@
 
       <section id="detailsPage" class="main-page" data-main-page="details" hidden><div id="analysisDetailsPage" class="analysis-details-page"><div class="card worktable-panel"><div class="page-heading compact"><div><h2>分析明细</h2><p>按阶段、岗位、渠道等维度查看招聘表现与明细记录。</p></div></div><div id="detailsDrilldownFilters" class="drilldown-filters" hidden></div><div class="detail-view-tabs" role="tablist" aria-label="分析明细切换"><button class="detail-view-tab active" role="tab" type="button" data-detail-tab="stage" onclick="switchDetailView('stage')">阶段分析</button><button class="detail-view-tab" role="tab" type="button" data-detail-tab="candidates" onclick="switchDetailView('candidates')">候选人明细</button><button class="detail-view-tab" role="tab" type="button" data-detail-tab="stage-reason" onclick="switchDetailView('stage-reason')">流失原因</button><button class="detail-view-tab" role="tab" type="button" data-detail-tab="jobs" onclick="switchDetailView('jobs')">岗位</button><button class="detail-view-tab" role="tab" type="button" data-detail-tab="channels" onclick="switchDetailView('channels')">渠道</button><button class="detail-view-tab" role="tab" type="button" data-detail-tab="companies" onclick="switchDetailView('companies')">人选来源公司</button><button class="detail-view-tab" role="tab" type="button" data-detail-tab="quality" onclick="switchDetailView('quality')">数据质量</button></div><div id="detailsStagePanel" data-detail-panel="stage">上传数据后展示阶段表现。</div><div id="detailsStageReasonPanel" data-detail-panel="stage-reason" hidden>上传数据后展示阶段与流失原因明细。</div><div id="detailsJobsPanel" data-detail-panel="jobs" hidden></div><div id="detailsChannelsPanel" data-detail-panel="channels" hidden></div><div id="detailsCompaniesPanel" data-detail-panel="companies" hidden></div><div id="detailsCandidatesPanel" data-detail-panel="candidates" hidden></div><div id="detailsQualityPanel" data-detail-panel="quality" hidden></div></div></div></section>
 
-      <section id="attentionPage" class="main-page" data-main-page="attention" hidden><div id="attentionBoardPage" class="attention-board-page"><div class="card worktable-panel"><div class="attention-board-header"><div><h2>需关注候选人 <span id="attentionTotalBadge" class="count-badge">0</span> <span id="attentionRulesInfo"></span></h2><p>集中查看当前需要推进、安排或确认结果的候选人。</p></div></div><div id="attentionDrilldownFilters" class="drilldown-filters" hidden></div><div id="attentionBoardEmpty" class="attention-empty">上传数据后展示需关注候选人。</div><div id="attentionBoardContent" hidden><div class="attention-stats-grid compact-attention-stats" id="attentionStatsGrid"></div><div class="attention-table-wrap" id="attentionCandidateTable"></div><div class="attention-summary-grid" id="attentionRiskSummary" hidden></div></div></div></div></section>
+      <section id="attentionPage" class="main-page" data-main-page="attention" hidden><div id="attentionBoardPage" class="attention-board-page"><div class="card worktable-panel"><div class="attention-board-header"><div><h2>需关注候选人 <span id="attentionTotalBadge" class="count-badge">（共0条记录）</span> <span id="attentionRulesInfo"></span></h2><p>集中查看当前需要推进、安排或确认结果的候选人。</p></div></div><div id="attentionDrilldownFilters" class="drilldown-filters" hidden></div><div id="attentionBoardEmpty" class="attention-empty">上传数据后展示需关注候选人。</div><div id="attentionBoardContent" hidden><div class="attention-stats-grid compact-attention-stats" id="attentionStatsGrid"></div><div class="attention-table-wrap" id="attentionCandidateTable"></div><div class="attention-summary-grid" id="attentionRiskSummary" hidden></div></div></div></div></section>
     </div>
   </div>
 
@@ -1670,6 +1670,7 @@
 
     // 全局数据
     let rawData = [];
+    let importedSourceRows = [];
     let columnMapping = {};
     let availableColumns = [];
     let currentFile = null;
@@ -1853,6 +1854,50 @@
       return buildRecruitmentTemplateDraft(stages);
     }
 
+    function isStageStructureChanged(previousStages, nextStages) {
+      if ((previousStages || []).length !== (nextStages || []).length) return true;
+      const getStructuralIdentity = stage => {
+        const semanticKey = getStableSemanticKey(stage?.label);
+        const configuredKey = normalizeCellText(stage?.key).toLowerCase();
+        const stableConfiguredKey = Object.values(SEMANTIC_STAGE_KEYS).flat().includes(configuredKey) ? configuredKey : '';
+        return semanticKey || stableConfiguredKey || 'custom-stage';
+      };
+      const orderChanged = (previousStages || []).some((stage, index) => {
+        const nextStage = nextStages[index];
+        return Number(stage.code) !== Number(nextStage?.code)
+          || getStructuralIdentity(stage) !== getStructuralIdentity(nextStage);
+      });
+      if (orderChanged) return true;
+      const previousFinalKey = getStableSemanticKey(previousStages?.[previousStages.length - 1]?.label);
+      const nextFinalKey = getStableSemanticKey(nextStages?.[nextStages.length - 1]?.label);
+      return previousFinalKey !== nextFinalKey && Boolean(previousFinalKey || nextFinalKey);
+    }
+
+    function applyStageConfiguration(nextStages) {
+      const previousStages = STAGES_CONFIG.map(stage => ({ ...stage }));
+      const normalizedStages = (nextStages || []).map((stage, code) => ({ ...stage, code }));
+      const structureChanged = isStageStructureChanged(previousStages, normalizedStages);
+      if (structureChanged && rawData.length > 0 && importedSourceRows.length === 0) {
+        showPageMessage('招聘流程结构已变化，请重新上传数据以重新识别流程状态。');
+        return { applied: false, rederived: false, requiresReupload: true };
+      }
+      STAGES_CONFIG = normalizedStages;
+      if (structureChanged && rawData.length > 0) {
+        const rederivedRows = transformData(importedSourceRows);
+        if (!rederivedRows.length) {
+          STAGES_CONFIG = previousStages;
+          showPageMessage('招聘流程结构已变化，请重新上传数据以重新识别流程状态。');
+          return { applied: false, rederived: false, requiresReupload: true };
+        }
+        rawData = rederivedRows;
+        initTimeSelectors();
+        refreshData();
+        return { applied: true, rederived: true, requiresReupload: false };
+      }
+      if (rawData.length > 0) refreshData();
+      return { applied: true, rederived: false, requiresReupload: false };
+    }
+
     function renderTemplatePreview(draft) {
       document.getElementById('templatePreviewUsage').textContent = '主阶段将从“' + draft.mainStageOptions.join('、') + '”中选择；阶段状态选项为“进行中、通过、终止”；阶段日期、阶段通过日期、Offer 接受日期、预计入职日期均为可选，缺失日期不判断超时。';
       document.getElementById('templatePreviewDataHeaders').textContent = draft.dataHeaders.join('、');
@@ -1935,7 +1980,8 @@
       const draft = getValidatedTemplateDraft();
       if (!draft) return;
       const shouldChooseFile = pendingUploadAfterStageConfig;
-      STAGES_CONFIG = draft.stages;
+      const result = applyStageConfiguration(draft.stages);
+      if (!result.applied) return;
       stageConfigDraft = null;
       error.hidden = true;
       document.getElementById('stageConfigModal').classList.remove('active');
@@ -1947,8 +1993,6 @@
           input.value = '';
           input.click();
         }
-      } else if (rawData.length > 0) {
-        refreshData();
       }
     }
 
@@ -3040,6 +3084,22 @@
       importData(currentFile);
     }
 
+    function commitImportedRows(sourceRows) {
+      const sourceColumns = [...new Set((sourceRows || []).flatMap(row => Object.keys(row || {}).filter(key => key !== '__sheetName' && key !== 'jobNameFromSheet')))];
+      const mappedMainStage = columnMapping.main_status && sourceColumns.includes(columnMapping.main_status);
+      if (!(sourceRows || []).length || (!mappedMainStage && !isRecruitmentDataSheet('', sourceColumns))) return false;
+      const nextRows = transformData(sourceRows || []);
+      if (!nextRows.length) return false;
+      importedSourceRows = (sourceRows || []).map(row => ({ ...row }));
+      rawData = nextRows;
+      resetDataBoundUiState();
+      document.getElementById('mainContent')?.classList.add('active');
+      updateProductShellState();
+      initTimeSelectors();
+      refreshData();
+      return true;
+    }
+
     // 导入数据
     function importData(file) {
       if (!file) {
@@ -3075,22 +3135,10 @@
             jsonData = await readExcelAllSheets(arrayBuffer);
           }
           
-          rawData = transformData(jsonData);
-          
-          if (rawData.length === 0) {
+          if (!commitImportedRows(jsonData)) {
             showPageMessage('未识别到有效数据，请检查表格列名或阶段/状态内容。');
             return;
           }
-          
-          // 显示主内容
-          document.getElementById('mainContent').classList.add('active');
-          updateProductShellState();
-          
-          // 初始化时间选择器
-          initTimeSelectors();
-          
-          // 刷新数据
-          refreshData();
           const warningText = autoImportWarnings.length ? '；' + autoImportWarnings.join('；') : '';
           showPageMessage('已导入 ' + rawData.length + ' 条招聘记录。' + warningText, autoImportWarnings.length ? 'info' : 'success');
           
@@ -3643,8 +3691,8 @@
     }
 
     function buildScopeLabel(scope) {
-      if (scope.timeMode === 'month') return scope.selectedMonth || '全部月份';
-      if (scope.timeMode === 'week') return scope.selectedWeek || '全部周';
+      if (scope.timeMode === 'month') return (scope.selectedMonth ? scope.selectedMonth + '收到的招聘记录' : '全部月份') + '（按简历收取时间，结果截至当前）';
+      if (scope.timeMode === 'week') return (scope.selectedWeek ? scope.selectedWeek + '收到的招聘记录' : '全部周') + '（按简历收取时间，结果截至当前）';
       return '整体分析';
     }
 
@@ -3667,7 +3715,7 @@
       const jobScopedRows = scope.selectedJobs.length
         ? (allRows || []).filter(item => scope.selectedJobs.includes(item.jobName || item.jobNameFromSheet || ''))
         : (allRows || []);
-      const excludedMissingDateCount = (scope.selectedMonth || scope.selectedWeek)
+      const excludedMissingDateCount = scope.timeMode !== 'overall'
         ? jobScopedRows.filter(item => !getRecordDate(item)).length
         : 0;
       const quality = buildQualitySummary(scopedRows, { excludedMissingDateCount });
@@ -4260,6 +4308,15 @@
       if (currentAnalysisResult) renderMainView('attention', currentAnalysisResult);
     }
 
+    function resetDataBoundUiState() {
+      Object.keys(detailViewFilters).forEach(key => { detailViewFilters[key] = {}; });
+      detailFilters = getDetailViewFilters(currentDetailView);
+      attentionFilters = {};
+      searchRenderTimers.forEach(timer => clearTimeout(timer));
+      searchRenderTimers.clear();
+      renderedRevisionByView = { review: -1, reviewAnalysis: -1, details: -1, attention: -1 };
+    }
+
     function renderAttentionBoard(resultOrRows) {
       const empty = document.getElementById('attentionBoardEmpty');
       const content = document.getElementById('attentionBoardContent');
@@ -4299,7 +4356,7 @@
       });
 
       const totalBadge = document.getElementById('attentionTotalBadge');
-      if (totalBadge) totalBadge.textContent = candidates.length;
+      if (totalBadge) totalBadge.textContent = '（共' + candidates.length + '条记录）';
       const rulesInfo = document.getElementById('attentionRulesInfo');
       if (rulesInfo) rulesInfo.innerHTML = infoTriggerHtml('需关注候选人口径', '仅包含尚未完成或终止的记录。优先展示超 SLA、已通过待安排、Offer 已接受待入职、预计入职逾期和缺少关键日期的候选人。', '查看需关注候选人口径');
       const filterBar = document.getElementById('attentionDrilldownFilters');
@@ -4838,6 +4895,8 @@
     }
 
     function getTerminationReasonDisplay(item) {
+      const isTerminated = TERMINATED_STATES.has(item?.processState) || item?.status === 'terminated';
+      if (!isTerminated) return '—';
       return getSourceTerminationReason(item) || '原因未记录';
     }
 
@@ -5005,32 +5064,156 @@
         return resolved.available ? stageRows.find(stage => stage.code === resolved.stage.code) : null;
       };
       const reasonRows = result.reasonMatrix || [];
+      const reasonsForStage = stageCode => reasonRows.filter(row => row.stageCode === stageCode);
+      const buildStageReasonProfile = stage => {
+        const categoryMeta = {
+          business: { label: '岗位/HC相关', family: 'business' },
+          intent: { label: '候选人意愿相关', family: 'candidate' },
+          reach: { label: '联系/触达相关', family: 'candidate' },
+          evaluation: { label: '匹配/评估相关', family: 'evaluation' },
+          missing: { label: '原因未记录', family: 'missing' }
+        };
+        const categories = new Map();
+        const addCategory = (key, label, family, count) => {
+          const current = categories.get(key) || { key, label, family, count: 0 };
+          current.count += count;
+          categories.set(key, current);
+        };
+        reasonsForStage(stage.code).forEach(row => {
+          const category = row.terminationReason === '原因未记录' || row.level1Category === '原因未记录'
+            ? 'missing'
+            : row.businessTermination || row.level1Category === '业务/HC'
+              ? 'business'
+              : row.level1Category === '候选人意愿'
+                ? 'intent'
+                : row.level1Category === '触达问题'
+                  ? 'reach'
+                  : row.level1Category === '匹配与评估'
+                    ? 'evaluation'
+                    : 'other-' + (row.level1Category || '未细分原因');
+          const meta = categoryMeta[category] || { label: row.level1Category && row.level1Category !== '未细分原因' ? row.level1Category : '其他已记录原因', family: 'other' };
+          addCategory(category, meta.label, meta.family, row.count || 0);
+        });
+        const totalLoss = stage.realLossCount || Array.from(categories.values()).reduce((sum, item) => sum + item.count, 0);
+        const rankedCategories = Array.from(categories.values())
+          .map(item => ({ ...item, share: toPercent(item.count, totalLoss) }))
+          .sort((a, b) => b.count - a.count || a.label.localeCompare(b.label, 'zh-CN'));
+        const familyCounts = new Map();
+        rankedCategories.forEach(item => familyCounts.set(item.family, (familyCounts.get(item.family) || 0) + item.count));
+        const rankedFamilies = Array.from(familyCounts.entries())
+          .map(([key, count]) => ({ key, count, share: toPercent(count, totalLoss) }))
+          .sort((a, b) => b.count - a.count);
+        const topFamily = rankedFamilies[0];
+        const secondFamily = rankedFamilies[1];
+        const dominantFamily = totalLoss >= 10
+          && topFamily?.count >= 3
+          && topFamily.share >= 60
+          && topFamily.count > (secondFamily?.count || 0)
+          ? topFamily.key
+          : null;
+        return {
+          totalLoss,
+          rankedCategories,
+          dominantFamily,
+          categoryCount: key => rankedCategories.find(item => item.key === key)?.count || 0,
+          familyCount: key => rankedFamilies.find(item => item.key === key)?.count || 0,
+          distributionText: rankedCategories.slice(0, 3).map(item => item.label + ' ' + item.count + '条（' + item.share.toFixed(1) + '%）').join('、')
+        };
+      };
+      const getMixedReasonAction = profile => {
+        const labels = [];
+        if (profile.categoryCount('business')) labels.push('岗位需求与HC状态');
+        if (profile.categoryCount('intent')) labels.push('候选人意愿');
+        if (profile.categoryCount('reach')) labels.push('联系与触达情况');
+        if (profile.categoryCount('evaluation')) labels.push('匹配与评估标准');
+        if (profile.categoryCount('missing')) labels.push('原始流失原因');
+        if (!labels.length || profile.rankedCategories.some(item => item.family === 'other')) labels.push('相关原因明细');
+        return '建议结合流失原因明细，分别核查' + labels.slice(0, 4).join('、') + '。';
+      };
+      const mixedStageInsight = (stage, profile) => ({
+        title: stage.label + '阶段存在已终止记录。',
+        conclusion: profile.totalLoss < 10
+          ? stage.label + '阶段有 ' + profile.totalLoss + ' 条招聘记录终止，当前样本较少；原因分布为' + profile.distributionText + '，暂不判断单一主因。'
+          : stage.label + '阶段终止原因较为分散，其中' + profile.distributionText + '，暂未形成单一主因。',
+        action: getMixedReasonAction(profile),
+        validationMetrics: [stage.label + '各类流失原因占比', stage.label + '已终止记录数']
+      });
+      const businessStageInsight = (stage, profile) => ({
+        title: stage.label + '阶段终止主要与业务或HC变化有关。',
+        conclusion: stage.label + '阶段终止主要与业务或HC变化有关，岗位/HC相关 ' + profile.familyCount('business') + '条（' + toPercent(profile.familyCount('business'), profile.totalLoss).toFixed(1) + '%）。',
+        action: '与 Hiring Manager 确认岗位状态、需求稳定性和后续招聘安排。',
+        validationMetrics: [stage.label + '业务/HC终止记录数', '当前有效招聘需求数']
+      });
+      const unknownStageInsight = (stage, profile) => ({
+        title: stage.label + '阶段终止记录的原因信息不足。',
+        conclusion: stage.label + '阶段有 ' + profile.familyCount('missing') + ' 条招聘记录未记录流失原因（占全部已终止记录 ' + toPercent(profile.familyCount('missing'), profile.totalLoss).toFixed(1) + '%），现有证据不足以支持进一步归因。',
+        action: '优先查看相关终止记录并确认原始流失原因，再决定是否调整招聘策略。',
+        validationMetrics: [stage.label + '原因未记录数', stage.label + '已终止记录数']
+      });
       const phone = stageFor('postScreen');
       if (phone?.realLossCount) {
-        const intentOrReach = reasonRows.filter(row => row.stageCode === phone.code && /不看机会|无意向|联系不上|失联|未回复/i.test(row.terminationReason || '')).reduce((sum, row) => sum + row.count, 0);
+        const profile = buildStageReasonProfile(phone);
+        const intentCount = profile.categoryCount('intent');
+        const reachCount = profile.categoryCount('reach');
+        const cause = profile.dominantFamily === 'business'
+          ? businessStageInsight(phone, profile)
+          : profile.dominantFamily === 'candidate'
+            ? {
+                title: '电话联系阶段终止主要集中在候选人侧原因。',
+                conclusion: '电话联系阶段终止主要集中在候选人意愿或触达相关原因，' + profile.rankedCategories.filter(item => ['intent', 'reach'].includes(item.key)).map(item => item.label + ' ' + item.count + '条（' + item.share.toFixed(1) + '%）').join('、') + '。',
+                action: intentCount && reachCount
+                  ? '查看相关候选人的背景与沟通记录，分别核查候选人意愿、联系时机与触达情况，再决定是否调整目标人才池或沟通方式。'
+                  : intentCount
+                    ? '查看相关候选人的背景与沟通记录，核查候选人机会意愿与目标人才池是否匹配。'
+                    : '查看相关候选人的联系记录，核查联系时机、触达方式和跟进节奏。',
+                validationMetrics: ['电话→一面转化率', '意愿/触达相关终止占比']
+              }
+            : profile.dominantFamily === 'missing'
+              ? unknownStageInsight(phone, profile)
+              : mixedStageInsight(phone, profile);
         add({
-          id: 'phone-contact-loss', kind: 'stage', title: '电话联系阶段的候选人意愿和触达问题较为集中。',
-          conclusion: '电话联系阶段的候选人意愿和触达问题较为集中。',
-          evidence: [buildInsightEvidence('关键证据', phone.realLossCount + '条招聘记录', '电话联系到达 ' + phone.reachedCount + ' 条招聘记录，真正流失 ' + phone.realLossCount + ' 条；其中意愿/触达相关原始原因 ' + intentOrReach + ' 条。', { stageCode: phone.code })],
-          action: '调整 Sourcing 关键词和首次沟通话术，在触达前加入机会意愿判断。', validationMetrics: ['电话→一面转化率', '无意向/联系不上占比']
+          id: 'phone-contact-loss', kind: 'stage', title: cause.title,
+          conclusion: cause.conclusion,
+          evidence: [buildInsightEvidence('关键证据', phone.realLossCount + '条招聘记录', '电话联系到达 ' + phone.reachedCount + ' 条招聘记录，真正流失 ' + phone.realLossCount + ' 条；原因分布：' + profile.distributionText + '。', { stageCode: phone.code })],
+          action: cause.action, validationMetrics: cause.validationMetrics
         });
       }
       const firstInterview = stageFor('firstInterview');
       if (firstInterview?.realLossCount) {
+        const profile = buildStageReasonProfile(firstInterview);
+        const evaluationLoss = profile.familyCount('evaluation');
+        const cause = profile.dominantFamily === 'business'
+          ? businessStageInsight(firstInterview, profile)
+          : profile.dominantFamily === 'evaluation'
+            ? {
+              title: '一面阶段终止主要与匹配或评估原因有关。',
+              conclusion: '一面阶段终止主要与匹配或评估原因有关，共 ' + evaluationLoss + ' 条招聘记录（' + toPercent(evaluationLoss, profile.totalLoss).toFixed(1) + '%）。',
+              action: '结合典型一面终止记录和面试反馈，与业务确认一面的主要评价重点及前置筛选边界。',
+              validationMetrics: ['一面阶段推进率', '评估相关终止占比']
+            }
+            : profile.dominantFamily === 'missing'
+              ? unknownStageInsight(firstInterview, profile)
+              : mixedStageInsight(firstInterview, profile);
         add({
-          id: 'first-interview-loss', kind: 'stage', title: '一面阶段的推进转化相对较低。',
-          conclusion: '一面阶段的推进转化相对较低，建议结合流失原因进一步判断主要影响因素。',
+          id: 'first-interview-loss', kind: 'stage', title: cause.title,
+          conclusion: cause.conclusion,
           evidence: [buildInsightEvidence('关键证据', firstInterview.realLossCount + '条招聘记录', '一面到达 ' + firstInterview.reachedCount + ' 条招聘记录，进入下一阶段 ' + firstInterview.advancedCount + ' 条，真正流失 ' + firstInterview.realLossCount + ' 条。', { stageCode: firstInterview.code })],
-          action: '结合典型一面流失记录和面试反馈，与业务校准 Must-have、简历筛选与面试评价标准。', validationMetrics: ['一面阶段推进率', '一面→Offer转化率']
+          action: cause.action, validationMetrics: cause.validationMetrics
         });
       }
       const largestLoss = stageRows.filter(stage => stage.realLossCount > 0 && stage.code !== phone?.code && stage.code !== firstInterview?.code).sort((a, b) => b.realLossCount - a.realLossCount)[0];
       if (largestLoss) {
+        const profile = buildStageReasonProfile(largestLoss);
+        const cause = profile.dominantFamily === 'business'
+          ? businessStageInsight(largestLoss, profile)
+          : profile.dominantFamily === 'missing'
+            ? unknownStageInsight(largestLoss, profile)
+            : mixedStageInsight(largestLoss, profile);
         add({
-          id: 'stage-loss-' + largestLoss.code, kind: 'stage', title: largestLoss.label + '阶段候选人流失相对集中',
-          conclusion: largestLoss.label + '阶段候选人流失相对集中，建议结合流失原因和候选人明细进一步了解。',
+          id: 'stage-loss-' + largestLoss.code, kind: 'stage', title: cause.title,
+          conclusion: cause.conclusion,
           evidence: [buildInsightEvidence('关键证据', largestLoss.realLossCount + '条招聘记录', '该阶段已结案 ' + largestLoss.effectiveClosedCount + ' 条招聘记录，阶段推进率 ' + displayAnalysisRate(largestLoss.closedConversionRate) + '。', { stageCode: largestLoss.code })],
-          action: '进入该阶段原因明细查看相关流失记录，明确是人才画像、流程安排还是候选人意愿需要调整。', validationMetrics: [largestLoss.label + '阶段推进率', largestLoss.label + '真正流失招聘记录数']
+          action: cause.action, validationMetrics: cause.validationMetrics
         });
       }
       const overdue = result.summary?.slaOverdueCount || 0;
@@ -5045,8 +5228,8 @@
       const offerRate = result.businessKpis?.offerToOnboardRate;
       if (offerRate?.available && offerRate.denominator) {
         add({
-          id: 'offer-onboard-conversion', kind: 'offer', priority: offerRate.value >= 60 ? 'P2' : 'P1', title: offerRate.value >= 60 ? 'Offer后承接整体稳定，但当前样本仍较小' : 'Offer后承接需要加强风险预判',
-          conclusion: offerRate.value >= 60 ? '当前 Offer 到入职承接表现积极，下一步应保持跟进节奏并扩大前端合格人才池。' : 'Offer 到入职承接偏弱，应及时识别候选人意愿和预计入职风险。',
+          id: 'offer-onboard-conversion', kind: 'offer', priority: 'P2', title: 'Offer后已有 ' + offerRate.numerator + ' 条招聘记录完成入职。',
+          conclusion: '当前 ' + offerRate.denominator + ' 条到达Offer的招聘记录中，已有 ' + offerRate.numerator + ' 条完成入职。',
           evidence: [buildInsightEvidence('关键证据', offerRate.numerator + ' / ' + offerRate.denominator, 'Offer→入职转化率 ' + offerRate.value + '%。', { processStateGroup: 'offer-outcomes' })],
           action: '建立 Offer 后固定触点，确认候选人意愿、离职进展与预计入职日期。', validationMetrics: ['Offer→入职转化率', 'Offer待入职人数']
         });
@@ -5104,39 +5287,13 @@
           type: insight.kind,
           title: insight.title,
           conclusion: insight.conclusion,
-          evidence: originalEvidence,
+          evidence: stageCode === undefined ? originalEvidence : [...originalEvidence, ...rawReasonEvidence(stageCode)],
           furtherQuestions: ['该阶段的原始流失原因是否存在较明显的共性；', '候选人安排、评价重点或下一步时效是否值得结合明细进一步了解。'],
-          actions: ['优先查看该阶段相关流失记录和可用反馈，再确定下一步动作。'],
+          actions: [insight.action || '优先查看该阶段相关流失记录和可用反馈，再确定下一步动作。'],
           observationMetrics: (insight.validationMetrics || []).slice(0, 2),
           limitations: [...(insight.limitations || []), ...stageSpecificLimit(stageCode)],
           priority: insight.kind === 'sla' ? 0 : insight.id === 'phone-contact-loss' ? 1 : insight.id === 'first-interview-loss' ? 2 : insight.kind === 'offer' ? 4 : 3
         };
-        if (insight.id === 'phone-contact-loss') {
-          const stage = result.stageRows?.find(row => row.code === stageCode);
-          return {
-            ...base,
-            conclusion: '电话联系阶段的候选人意愿和触达问题较为集中。',
-            evidence: [evidence('电话联系阶段流失', (stage?.realLossCount || 0) + '条招聘记录', '电话联系累计到达 ' + (stage?.reachedCount || 0) + ' 条招聘记录，真正流失 ' + (stage?.realLossCount || 0) + ' 条。', { stageCode }), ...rawReasonEvidence(stageCode)],
-            furtherQuestions: ['当前目标人才池的机会意愿、联系时机和首次沟通重点是否与候选人关注点匹配。'],
-            actions: ['优先查看无意向和联系不上的候选人背景与沟通记录，重点确认当前人才池、联系时机和首次沟通内容是否需要调整。'],
-            observationMetrics: ['电话→一面转化率', '无意向/联系不上占比']
-          };
-        }
-        if (insight.id === 'first-interview-loss') {
-          const stage = result.stageRows?.find(row => row.code === stageCode);
-          return {
-            ...base,
-            conclusion: '一面阶段的推进转化相对较低。',
-            evidence: [
-              evidence('一面累计到达', (stage?.reachedCount || 0) + '条招聘记录', (stage?.reachedCount || 0) + ' 条招聘记录累计到达一面。', { stageCode }),
-              evidence('进入后续阶段', (stage?.advancedCount || 0) + '条招聘记录', (stage?.advancedCount || 0) + ' 条招聘记录进入后续阶段。', { stageCode }),
-              evidence('一面阶段流失', (stage?.realLossCount || 0) + '条招聘记录', (stage?.realLossCount || 0) + ' 条招聘记录在一面流失。', { stageCode })
-            ],
-            furtherQuestions: ['一面具体流失原因是否存在较明显共性。', '简历筛选与业务面试的主要关注点是否需要进一步校准。', '排期与反馈时效是否存在明显等待。'],
-            actions: ['结合典型一面流失记录和面试反馈，与业务确认当前一面的主要评价重点和前置筛选边界。'],
-            observationMetrics: ['一面阶段推进率', '一面→Offer转化率']
-          };
-        }
         if (insight.kind === 'sla') return {
           ...base,
           conclusion: '当前有部分招聘记录超过阶段SLA，需要优先关注推进安排。',
@@ -5144,22 +5301,6 @@
           actions: ['优先确认超SLA候选人的当前反馈和下一步安排，避免继续等待。'],
           observationMetrics: ['超SLA招聘记录数', '阶段平均停留']
         };
-        if (insight.kind === 'offer') return {
-          ...base,
-          conclusion: (result?.businessKpis?.offerToOnboardRate?.numerator || 0) > 0 ? '当前Offer后已有部分候选人完成入职，但样本仍较少，建议继续观察后续结果。' : '当前Offer后尚未观察到完成入职的记录，样本仍较少，建议继续观察后续结果。',
-          evidence: [
-            ...originalEvidence,
-            ...(candidates.filter(item => item.processState === 'offer_accepted_pending_onboard').length ? [evidence('Offer待入职', candidates.filter(item => item.processState === 'offer_accepted_pending_onboard').length + '条招聘记录', '当前仍有Offer已接受、待入职的招聘记录需要持续跟进。', { processState: 'offer_accepted_pending_onboard' })] : [])
-          ],
-          furtherQuestions: ['候选人的入职安排、离职进展和其他机会是否需要持续确认。'],
-          actions: ['持续确认Offer待入职候选人的离职进展和预计入职日期。'],
-          observationMetrics: ['Offer→入职转化率', 'Offer待入职招聘记录数']
-        };
-        if (stageCode !== undefined) {
-          const stage = result.stageRows?.find(row => row.code === stageCode);
-          base.conclusion = (stage?.label || insight.title || '该阶段') + '有较多招聘记录终止，值得进一步复盘。';
-          base.furtherQuestions = ['该阶段的原始流失原因是否存在较明显的共性。', '候选人安排、评价重点或下一步时效是否值得结合明细进一步了解。'];
-        }
         return base;
       };
       const findings = (result?.insights || []).filter(insight => insight.kind !== 'quality').map(makeFinding).sort((a, b) => a.priority - b.priority).slice(0, 5);
@@ -5179,7 +5320,7 @@
       const dataLimitations = [
         quality.missingSpecificReasonCount ? { label: '部分流失原因未记录或较概括', detail: quality.missingSpecificReasonCount + ' 条流失记录缺少可核查的原始原因。', navigation: { page: 'details', tab: 'quality', filters: {} } } : null,
         quality.missingStageDateCount ? { label: '部分当前阶段日期缺失', detail: quality.missingStageDateCount + ' 条在手记录无法完整判断阶段停留和 SLA。', navigation: { page: 'details', tab: 'quality', filters: {} } } : null,
-        quality.excludedMissingDateCount ? { label: '部分记录缺少时间筛选所需日期', detail: quality.excludedMissingDateCount + ' 条记录未进入当前指定时间范围。', navigation: { page: 'details', tab: 'quality', filters: {} } } : null
+        quality.excludedMissingDateCount ? { label: '部分记录缺少简历收取时间', detail: quality.excludedMissingDateCount + (result?.scope?.selectedMonth || result?.scope?.selectedWeek ? ' 条记录未进入当前指定时间范围。' : ' 条记录未进入月度/周度趋势。'), navigation: { page: 'details', tab: 'quality', filters: {} } } : null
       ].filter(Boolean);
       const riskItems = [
         { label: '需关注招聘记录', count: candidates.length, filters: {} },
@@ -5191,8 +5332,6 @@
       ].filter(item => item.count > 0);
       const actionTitles = {
         'sla-overdue': '跟进超过SLA的在途记录',
-        'phone-contact-loss': '查看电话联系阶段的意愿与触达记录',
-        'first-interview-loss': '结合一面流失记录校准标准',
         'offer-onboard-conversion': '持续跟进Offer待入职招聘记录'
       };
       const seenActions = new Set();
@@ -5273,7 +5412,7 @@
     function isNumericTableColumn(header, index) {
       if (index === 0) return false;
       const text = normalizeCellText(header);
-      return /(招聘记录|简历量|候选人数|人数|初筛通过|一面到达|Offer|入职|进入下一阶段|真正流失|当前库存|超SLA|记录数|影响记录|有效样本|平均停留|平均流转|中位数|覆盖率|比例|占比|转化率|推进率|入职率)$/.test(text);
+      return /(招聘记录|简历量|候选人数|人数|到达|初筛通过|一面|Offer|入职|进入下一阶段|真正流失|当前库存|超SLA|记录数|影响记录|有效样本|理论样本|平均停留|平均流转|平均耗时|中位数|比例|占比|率)$/.test(text);
     }
 
     function displayAnalysisRate(value) {
@@ -5285,26 +5424,30 @@
         const resolved = resolveSemanticStage(role);
         return resolved.available ? (row.stageReach?.[resolved.stage.code] ?? 0) : null;
       };
-      const rate = (numerator, denominator) => denominator ? displayAnalysisRate(toPercent(numerator, denominator)) : '—';
+      const rate = (numerator, denominator, row) => {
+        if (!denominator) return '—';
+        const value = displayAnalysisRate(toPercent(numerator, denominator));
+        return value;
+      };
       const actionName = row => '<button type="button" class="table-link" data-dimension-drilldown="' + escapeHtml(JSON.stringify({ dimension: dimensionLabel, dimensionValue: row.name })) + '" onclick="openDimensionDrilldown(this)">' + escapeHtml(row.name) + '</button>';
       if (dimensionLabel === '岗位') {
         renderCompactTable(containerId, ['岗位', '招聘记录', '一面到达', 'Offer', '入职', '一面→Offer', '整体入职率', '主要流失阶段', '超SLA'], (rows || []).map(row => {
           const first = semanticCount(row, 'firstInterview'); const offer = semanticCount(row, 'offer');
-          return [actionName(row), row.totalCandidates, first === null ? '—' : first, offer === null ? '—' : offer, row.completedCount, first === null || offer === null ? '—' : rate(offer, first), displayAnalysisRate(row.finalConversionRate), escapeHtml(row.mainLossStage || '—'), row.slaOverdueCount || '—'];
+          return [actionName(row), row.totalCandidates, first === null ? '—' : first, offer === null ? '—' : offer, row.completedCount, first === null || offer === null ? '—' : rate(offer, first, row), displayAnalysisRate(row.finalConversionRate), escapeHtml(row.mainLossStage || '—'), row.slaOverdueCount || '—'];
         }), '当前范围暂无岗位数据');
         return;
       }
       if (dimensionLabel === '渠道') {
         renderCompactTable(containerId, ['渠道', '简历量', '初筛通过率', '一面到达', 'Offer', '入职', '一面→Offer', '主要流失阶段'], (rows || []).map(row => {
           const screen = semanticCount(row, 'resumeScreen'); const post = semanticCount(row, 'postScreen'); const first = semanticCount(row, 'firstInterview'); const offer = semanticCount(row, 'offer');
-          return [actionName(row), row.totalCandidates, screen === null || post === null ? '—' : rate(post, screen), first === null ? '—' : first, offer === null ? '—' : offer, row.completedCount, first === null || offer === null ? '—' : rate(offer, first), escapeHtml(row.mainLossStage || '—')];
+          return [actionName(row), row.totalCandidates, screen === null || post === null ? '—' : rate(post, screen, row), first === null ? '—' : first, offer === null ? '—' : offer, row.completedCount, first === null || offer === null ? '—' : rate(offer, first, row), escapeHtml(row.mainLossStage || '—')];
         }), '当前范围暂无渠道数据');
         return;
       }
       renderCompactTable(containerId, ['人选来源公司', '招聘记录', '初筛通过', '一面到达', 'Offer', '入职', '一面到达率', '最深到达阶段'], (rows || []).map(row => {
         const screen = semanticCount(row, 'resumeScreen'); const post = semanticCount(row, 'postScreen'); const first = semanticCount(row, 'firstInterview'); const offer = semanticCount(row, 'offer');
         const deepest = Object.entries(row.stageReach || {}).filter(([, value]) => value > 0).map(([code]) => getStageByCode(Number(code))).filter(Boolean).sort((a, b) => getStageIndex(b.code) - getStageIndex(a.code))[0];
-        return [actionName(row), row.totalCandidates, screen === null || post === null ? '—' : post, first === null ? '—' : first, offer === null ? '—' : offer, row.completedCount, screen === null || first === null ? '—' : rate(first, screen), escapeHtml(deepest?.label || '—')];
+        return [actionName(row), row.totalCandidates, screen === null || post === null ? '—' : post, first === null ? '—' : first, offer === null ? '—' : offer, row.completedCount, screen === null || first === null ? '—' : rate(first, screen, row), escapeHtml(deepest?.label || '—')];
       }), '当前范围暂无人选来源公司数据');
     }
 
@@ -5457,7 +5600,7 @@
       if (!panel) return;
       const filters = getDetailViewFilters('candidates');
       const keyword = normalizeCellText(filters.search).toLowerCase();
-      const reasons = (rows || []).map(row => row.rawReason).filter(value => value && value !== '原因未记录').filter((value, index, values) => values.indexOf(value) === index).sort((a, b) => a.localeCompare(b, 'zh-CN'));
+      const reasons = (rows || []).map(row => row.rawReason).filter(value => value && value !== '原因未记录' && value !== '—').filter((value, index, values) => values.indexOf(value) === index).sort((a, b) => a.localeCompare(b, 'zh-CN'));
       const stageOptions = (STAGES_CONFIG || []).map(stage => '<option value="' + stage.code + '"' + (Number(filters.stageCode) === Number(stage.code) ? ' selected' : '') + '>' + escapeHtml(stage.label) + '</option>').join('');
       const reasonOptions = reasons.map(reason => '<option value="' + escapeHtml(reason) + '"' + (filters.terminationReason === reason ? ' selected' : '') + '>' + escapeHtml(reason) + '</option>').join('');
       const statusOptions = [
@@ -5587,7 +5730,9 @@
           normalItems.push('标准漏斗覆盖率 ' + displayAnalysisRate(quality.standardFunnelCoverageRate));
         }
         if ((quality.excludedMissingDateCount || 0) > 0) {
-          attentionItems.push({ title: '时间筛选排除了 ' + quality.excludedMissingDateCount + ' 条缺少日期的招聘记录', detail: '这些记录不进入当前指定月份或周的分析范围。' });
+          const allPeriodTrend = result?.scope && result.scope.timeMode !== 'overall' && !result.scope.selectedMonth && !result.scope.selectedWeek;
+          const hasSpecificPeriod = !allPeriodTrend;
+          attentionItems.push({ title: hasSpecificPeriod ? '时间筛选排除了 ' + quality.excludedMissingDateCount + ' 条缺少日期的招聘记录' : quality.excludedMissingDateCount + ' 条招聘记录缺少简历收取时间', detail: hasSpecificPeriod ? '这些记录不进入当前指定月份或周的分析范围。' : '这些记录仍计入当前总量，但不进入月度或周度趋势。' });
         }
         const statusHtml = '<div class="quality-status-layout">' +
           (attentionItems.length ? '<div class="quality-attention-list">' + attentionItems.map(item => '<div class="quality-attention-item"><strong>' + escapeHtml(item.title) + '</strong><span>' + escapeHtml(item.detail) + '</span></div>').join('') + '</div>' : '') +
@@ -5654,7 +5799,7 @@
       const container = document.getElementById('stageTimingList');
       if (!container) return;
       const titleNote = container.closest('.stage-timing-card')?.querySelector('.dashboard-panel-title > span');
-      if (titleNote) titleNote.innerHTML = infoTriggerHtml('阶段招聘时效', '平均流转天数按招聘记录实际进入的下一适用阶段计算；没有有效样本的阶段不进入图表。', '查看阶段招聘时效说明');
+      if (titleNote) titleNote.innerHTML = infoTriggerHtml('阶段招聘时效', '阶段时长按自然日计算，仅用于流程提醒；当前阶段日期缺失时可能基于最近有效节点估算，不用于责任认定。平均流转天数按招聘记录实际进入的下一适用阶段计算；没有有效样本的阶段不进入图表。', '查看阶段招聘时效说明');
       const rows = (stageRows || []).map(stage => {
         const index = STAGES_CONFIG.findIndex(config => Number(config.code) === Number(stage.code));
         const nextStage = index >= 0 ? STAGES_CONFIG[index + 1] : null;
@@ -5741,7 +5886,16 @@
       const selectedKey = dimension === 'month' ? scope.selectedMonth : scope.selectedWeek;
       const currentIndex = selectedKey ? buckets.findIndex(bucket => bucket.key === selectedKey) : buckets.length - 1;
       const current = currentIndex >= 0 ? buckets[currentIndex] : null;
-      const previous = currentIndex > 0 ? buckets[currentIndex - 1] : null;
+      const expectedPreviousKey = current ? (() => {
+        const date = new Date(current.date);
+        if (dimension === 'month') {
+          date.setMonth(date.getMonth() - 1);
+          return formatMonthKey(date);
+        }
+        date.setDate(date.getDate() - 7);
+        return getAnalysisWeekKey(date);
+      })() : '';
+      const previous = expectedPreviousKey ? buckets.find(bucket => bucket.key === expectedPreviousKey) : null;
       const comparison = current && previous ? {
         currentKey: current.key,
         previousKey: previous.key,
@@ -5906,7 +6060,8 @@
       const summary = document.getElementById('periodTrendSummary');
       const comparison = trend.comparison;
       const currentValue = currentIndex >= 0 ? selected?.values[currentIndex] : null;
-      const previousValue = currentIndex > 0 ? selected?.values[currentIndex - 1] : null;
+      const previousIndex = comparison ? trend.buckets.findIndex(bucket => bucket.key === comparison.previousKey) : -1;
+      const previousValue = previousIndex >= 0 ? selected?.values[previousIndex] : null;
       if (changes) changes.innerHTML = Number.isFinite(currentValue) && Number.isFinite(previousValue)
           ? '<div class="trend-change"><span>' + escapeHtml(selected.label) + '环比</span><strong>' + (currentValue - previousValue > 0 ? '+' : '') + Number((currentValue - previousValue).toFixed(1)) + (selected.key === 'firstInterviewToOffer' ? 'pct' : '条') + '</strong></div>'
         : '<div class="trend-change"><span>暂无上一期可比较数据</span></div>';
@@ -5955,7 +6110,7 @@
       const total = document.getElementById('attentionPreviewTotal');
       const container = document.getElementById('attentionPreviewContent');
       const candidates = result?.attentionCandidates || [];
-      if (total) total.textContent = '（共' + candidates.length + '人）';
+      if (total) total.textContent = '（共' + candidates.length + '条记录）';
       if (!container) return;
       if (!candidates.length) { container.innerHTML = '<p class="attention-empty">当前范围暂无需关注候选人。</p>'; return; }
       const inProgress = candidates.filter(item => item.processState === 'in_progress').length;
@@ -6116,10 +6271,16 @@
       refineAttentionPreview(result);
     }
 
+    function syncCurrentRange(result) {
+      const recordCount = document.getElementById('reviewRecordCount');
+      if (recordCount) recordCount.textContent = result?.rows?.length ?? 0;
+    }
+
     // 刷新数据
     function refreshData() {
       if (!rawData.length) {
         currentAnalysisResult = null;
+        syncCurrentRange(null);
         updateProductShellState();
         switchMainView(currentMainView);
         return;
@@ -6127,10 +6288,13 @@
       const dimension = document.getElementById('timeDimension')?.value || 'overall';
       const monthSelector = document.getElementById('monthSelector');
       const weekSelector = document.getElementById('weekSelector');
+      const cohortScopeNote = document.getElementById('cohortScopeNote');
       if (monthSelector) monthSelector.hidden = dimension !== 'month';
       if (weekSelector) weekSelector.hidden = dimension !== 'week';
+      if (cohortScopeNote) cohortScopeNote.hidden = dimension === 'overall';
 
       currentAnalysisResult = buildAnalysisResult(rawData, getAnalysisScope());
+      syncCurrentRange(currentAnalysisResult);
       renderRevision += 1;
       renderedRevisionByView = { review: -1, reviewAnalysis: -1, details: -1, attention: -1 };
 
@@ -6210,10 +6374,42 @@
       document.body.appendChild(link); link.click(); document.body.removeChild(link); URL.revokeObjectURL(link.href);
     }
 
-    function copyReviewAnalysisContent() {
+    function copyTextWithTextareaFallback(text) {
+      const textarea = document.createElement('textarea');
+      textarea.dataset.copyFallback = 'true';
+      textarea.value = text;
+      textarea.setAttribute('readonly', '');
+      textarea.style.position = 'fixed';
+      textarea.style.left = '-9999px';
+      textarea.style.top = '0';
+      document.body.appendChild(textarea);
+      textarea.focus();
+      textarea.select();
+      let copied = false;
+      try {
+        copied = typeof document.execCommand === 'function' && document.execCommand('copy') === true;
+      } catch (error) {
+        copied = false;
+      } finally {
+        textarea.remove();
+      }
+      return copied;
+    }
+
+    async function copyReviewAnalysisContent() {
       const text = generateReviewReport(currentAnalysisResult);
-      if (navigator.clipboard?.writeText) navigator.clipboard.writeText(text).then(() => showPageMessage('复盘内容已复制。', 'success'));
-      else { const textarea = document.createElement('textarea'); textarea.value = text; document.body.appendChild(textarea); textarea.select(); document.execCommand('copy'); textarea.remove(); showPageMessage('复盘内容已复制。', 'success'); }
+      let copied = false;
+      if (navigator.clipboard?.writeText) {
+        try {
+          await navigator.clipboard.writeText(text);
+          copied = true;
+        } catch (error) {
+          copied = false;
+        }
+      }
+      if (!copied) copied = copyTextWithTextareaFallback(text);
+      showPageMessage(copied ? '复盘内容已复制。' : '复制失败，请手动复制。', copied ? 'success' : 'error');
+      return copied;
     }
 
     function openFullReportModal() {
@@ -6231,6 +6427,23 @@
           label
         })
       }));
+    };
+    window.commitImportedRowsForTest = commitImportedRows;
+    window.getDataBoundUiStateForTest = () => ({
+      detailViewFilters: Object.fromEntries(Object.entries(detailViewFilters).map(([key, filters]) => [key, { ...filters }])),
+      attentionFilters: { ...attentionFilters },
+      pendingSearchTimers: searchRenderTimers.size
+    });
+    window.applyStageConfigurationForTest = function(labels) {
+      const stages = labels.map((label, code) => {
+        const key = getStableSemanticKey(label) || 'custom_' + code;
+        const stage = { code, key, label, color: getStageColor(code) };
+        return { ...stage, slaDays: getDefaultSlaDays(stage) };
+      });
+      return applyStageConfiguration(stages);
+    };
+    window.applyStageConfigurationDraftForTest = function(stages) {
+      return applyStageConfiguration((stages || []).map((stage, code) => ({ ...stage, code })));
     };
     window.generateFunnelAnalysisForTest = generateFunnelAnalysis;
     window.transformDataForTest = transformData;
