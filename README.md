@@ -55,3 +55,10 @@ npm test
 
 这是一个单文件应用，可直接打开 `index.html`，也可使用任意静态 Web Server 运行。
 
+## 项目截图
+
+> 截图使用虚拟数据，仅用于功能展示。
+
+<img width="2880" height="1800" alt="03-总览-KPI与漏斗" src="https://github.com/user-attachments/assets/274bd7f7-9621-471c-b4ab-ae0f59461f3d" />
+筛选文件
+
