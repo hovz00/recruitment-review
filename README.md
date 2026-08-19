@@ -55,28 +55,3 @@ npm test
 
 这是一个单文件应用，可直接打开 `index.html`，也可使用任意静态 Web Server 运行。
 
-## 项目截图
-
-### 流程阶段配置
-
-![流程阶段配置](assets/screenshots/stage-configuration.png)
-
-### 数据总览、招聘漏斗与阶段分析
-
-![数据总览、招聘漏斗与阶段分析](assets/screenshots/overview-funnel-analysis.png)
-
-### 渠道来源分析
-
-![渠道来源分析](assets/screenshots/channel-analysis.png)
-
-### 公司来源分析
-
-![公司来源分析](assets/screenshots/company-analysis.png)
-
-### 需关注候选人
-
-![需关注候选人](assets/screenshots/attention-candidates.png)
-
-### 复盘摘要
-
-![复盘摘要](assets/screenshots/report-preview.png)
